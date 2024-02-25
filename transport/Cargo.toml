@@ -1,0 +1,12 @@
+[workspace]
+members = [
+    "split",
+    "produce",
+    "consume",
+]
+resolver = "2"
+
+[workspace.dependencies]
+serde = { version = "1.0", features = ["derive"] }
+tokio = { version = "1", features = ["macros"] }
+warp = "0.3"
