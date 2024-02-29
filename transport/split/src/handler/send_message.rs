@@ -1,4 +1,4 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use warp::{http, Filter};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -8,10 +8,7 @@ struct Message {
     payload: String,
 }
 
-async fn send_message(
-    m: Message,
-) -> Result<impl warp::Reply, warp::Rejection> {
-
+async fn send_message(m: Message) -> Result<impl warp::Reply, warp::Rejection> {
     Ok(warp::reply::with_status(
         "Message sended successfully",
         http::StatusCode::CREATED,
