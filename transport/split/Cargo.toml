@@ -9,3 +9,7 @@ edition = "2021"
 tokio =  { workspace = true }
 warp =  { workspace = true }
 serde =  { workspace = true }
+reqwest = { workspace = true }
+clap = { workspace = true }
+
+common = {path="../common"}

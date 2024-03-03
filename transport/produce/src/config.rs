@@ -1,33 +1,38 @@
 use clap::Parser;
 use std::{env::var_os, ffi::OsStr};
 
-const CODE_SERVICE_URL_DEFAULT: &str = "http://localhost:8080/code";
-const LISTEN_DEFAULT: &str = "0.0.0.0:8000";
+const LISTEN_DEFAULT: &str = "0.0.0.0:8002";
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
     #[arg(short, long)]
-    code_service_url: String,
+    brokers: String,
+
+    #[arg(short, long)]
+    topic: String,
 }
 
 #[derive(Debug, Clone)]
 pub struct Config {
     pub listen: String,
-    pub code_service_url: String,
+    pub brokers: String,
+    pub topic: String,
 }
 
 impl Config {
     pub fn build() -> Self {
         Self {
             listen: LISTEN_DEFAULT.to_owned(),
-            code_service_url: CODE_SERVICE_URL_DEFAULT.to_owned(),
+            brokers: "".to_string(),
+            topic: "".to_string(),
         }
     }
 
     pub fn cmd_parse(mut self) -> Self {
         let args = Args::parse();
-        self.code_service_url = args.code_service_url;
+        self.brokers = args.brokers;
+        self.topic = args.topic;
         self
     }
 
