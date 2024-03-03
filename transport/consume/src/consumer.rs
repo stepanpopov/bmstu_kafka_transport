@@ -128,6 +128,7 @@ impl<T: ClientContext + ConsumerContext> SegmentConsumer<T> {
             };
 
             loop {
+                // Detach can be done before moving to another thread and building segment there to perf upupup
                 let res = self.base.poll(Duration::ZERO).unwrap().unwrap().detach();
 
                 let partiton = res.partition();
