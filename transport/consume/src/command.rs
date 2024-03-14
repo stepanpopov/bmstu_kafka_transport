@@ -1,19 +1,21 @@
+use std::borrow::Borrow;
+
 use clap::{Arg, Command};
 
-pub struct Config<'a> {
-    pub brokers: &'a str,
-    pub group_id: &'a str,
-    pub topic: &'a str,
-    pub receive_url: &'a str,
+pub struct Config {
+    pub brokers: String,
+    pub group_id: String,
+    pub topic: String,
+    pub receive_url: String,
 }
 
-impl<'a> Config<'a> {
+impl Config {
     pub fn from_cmd() -> Self {
         let matches = Config::command().get_matches();
-        let topic: &str = *matches.get_one("topic").unwrap();
-        let brokers: &str = *matches.get_one("brokers").unwrap();
-        let group_id = *matches.get_one("group-id").unwrap();
-        let receive_url = *matches.get_one("receive_url").unwrap();
+        let topic = matches.get_one::<String>("topic").unwrap().to_owned();
+        let brokers = matches.get_one::<String>("brokers").unwrap().to_owned();
+        let group_id = matches.get_one::<String>("group-id").unwrap().to_owned();
+        let receive_url = matches.get_one::<String>("receive_url").unwrap().to_owned();
 
         Self {
             topic,

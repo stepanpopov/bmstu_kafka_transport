@@ -1,5 +1,5 @@
 use clap::Parser;
-use std::{env::var_os, ffi::OsStr};
+use std::{env::var_os, ffi::OsStr, fmt::Display};
 
 const LISTEN_DEFAULT: &str = "0.0.0.0:8002";
 

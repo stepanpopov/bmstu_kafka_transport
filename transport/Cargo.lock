@@ -1027,6 +1027,7 @@ dependencies = [
  "anyhow",
  "clap",
  "common",
+ "log",
  "rdkafka",
  "serde",
  "tokio",
@@ -1328,6 +1329,7 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "common",
+ "log",
  "reqwest",
  "serde",
  "tokio",

@@ -6,7 +6,7 @@ use warp::{http, reply::Reply, Filter};
 
 use common::{Segment, SegmentWithTime};
 
-const CHUNK_BYTE_SIZE: usize = 200;
+const CHUNK_BYTE_SIZE: usize = 2;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Message {
@@ -44,10 +44,12 @@ pub async fn send_message(
 ) -> Result<warp::reply::Response, warp::Rejection> {
     let segments = split_message(m);
 
-    let client = reqwest::Client::new().post(code_service_url);
+    let client = reqwest::Client::new();
+
+    let url = code_service_url.into_url().unwrap();
 
     for segment in segments {
-        let resp = match client.try_clone().unwrap().json(&segment).send().await {
+        let resp = match client.post(url.clone()).json(&segment).send().await {
             Ok(resp) => resp,
             Err(e) => {
                 return Ok(warp::reply::with_status(

@@ -12,5 +12,6 @@ serde =  { workspace = true }
 clap = { workspace = true }
 rdkafka = { workspace = true }
 anyhow = {workspace = true}
+log = {workspace = true}
 
 common = {path="../common"}

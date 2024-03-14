@@ -137,7 +137,7 @@ impl<'de> Deserialize<'de> for SegmentWithTime {
     }
 }
 
-pub fn setup_logger(log_thread: bool) {
+pub fn setup_env_logger(log_thread: bool, default_env_var_log_level: &str) {
     let output_format = move |formatter: &mut Formatter, record: &Record| {
         let thread_name = if log_thread {
             format!("(t: {}) ", thread::current().name().unwrap_or("unknown"))
@@ -160,6 +160,10 @@ pub fn setup_logger(log_thread: bool) {
 
     let mut builder = Builder::new();
     builder.format(output_format);
+
+    if std::env::var(default_env_var_log_level).is_err() {
+        builder.filter_level(LevelFilter::Info);
+    }
 
     // rust_log.map(|conf| builder.parse_filters(conf));
 

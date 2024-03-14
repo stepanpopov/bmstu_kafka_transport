@@ -8,7 +8,7 @@ use rdkafka::error::KafkaResult;
 use rdkafka::topic_partition_list::TopicPartitionList;
 use rdkafka::util::get_rdkafka_version;
 
-use common::setup_logger;
+use common::setup_env_logger;
 
 mod command;
 mod consumer;
@@ -46,7 +46,7 @@ impl ConsumerContext for SegmentConsumerContext {
 #[tokio::main]
 async fn main() {
     let config = Config::from_cmd();
-    setup_logger(true);
+    setup_env_logger(true, "RUST_LOG");
 
     let (version_n, version_s) = get_rdkafka_version();
     info!("rd_kafka_version: 0x{:08x}, {}", version_n, version_s);
@@ -54,9 +54,9 @@ async fn main() {
     let message_sender = MessageSender::new(config.receive_url).unwrap();
 
     let mut consumer =
-        SegmentConsumer::new(SegmentConsumerContext, config.group_id, config.brokers);
+        SegmentConsumer::new(SegmentConsumerContext, &config.group_id, &config.brokers);
 
-    consumer.subscribe(config.topic);
+    consumer.subscribe(&config.topic);
 
     let _ = consumer
         .start_consume_and_send(message_sender, Duration::from_secs(1))

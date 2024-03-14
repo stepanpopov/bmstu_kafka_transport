@@ -4,6 +4,10 @@ use warp::{http, Filter};
 use config::Config;
 use handler::routes;
 
+use log::{error, info};
+
+use common::setup_env_logger;
+
 mod config;
 mod handler;
 
@@ -12,7 +16,7 @@ async fn main() {
     // let config = Config::from_env();
     let config = Config::build().cmd_parse().get_env();
 
-    // let url = "http://localhost:8080/code";
+    setup_env_logger(true, "RUST_LOG");
 
     warp::serve(routes(config.code_service_url))
         .run(config.listen.parse::<SocketAddr>().unwrap())

@@ -11,5 +11,6 @@ warp =  { workspace = true }
 serde =  { workspace = true }
 reqwest = { workspace = true }
 clap = { workspace = true }
+log = {workspace = true}
 
 common = {path="../common"}
