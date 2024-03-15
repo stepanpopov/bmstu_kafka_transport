@@ -7,14 +7,12 @@ use tokio_stream::StreamExt;
 use anyhow::{anyhow, Error};
 use itertools::Itertools;
 
-use std::borrow::Borrow;
 use std::sync::Arc;
 
 use rdkafka::client::ClientContext;
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
 use rdkafka::consumer::stream_consumer::StreamConsumer;
-use rdkafka::consumer::{BaseConsumer, CommitMode, Consumer, ConsumerContext, Rebalance};
-use rdkafka::error::KafkaResult;
+use rdkafka::consumer::{BaseConsumer, Consumer, ConsumerContext};
 use rdkafka::message::{Headers, Message as KafkaMessage};
 
 use super::sender::MessageSender;
@@ -100,47 +98,39 @@ impl<T: ClientContext + ConsumerContext> SegmentConsumer<T> {
     pub async fn start_consume_and_send(
         &self,
         sender: MessageSender,
-        fetch_interval: Duration,
+        collect_message_interval: Duration,
     ) -> Result<(), Error> {
         if self.topic.is_none() {
             return Err(anyhow!("call subscribe first"));
         }
-        let topic = self.topic.clone().unwrap();
 
         let sender = Arc::new(sender);
 
-        let fetch_timeout = Duration::from_millis(500);
+        let mut interval = interval(collect_message_interval);
 
-        let mut interval = interval(fetch_interval);
         interval.set_missed_tick_behavior(MissedTickBehavior::Delay);
+
         let mut interval_stream = IntervalStream::new(interval);
 
-        while let Some(_) = interval_stream.next().await {
+        while let Some(ins) = interval_stream.next().await {
             let mut segments: Vec<SegmentWithTime> = vec![];
 
-            let is_max_offset = |last_offset: i64, partition: i32| {
-                let (_, max_offset) = self
-                    .base
-                    .fetch_watermarks(&topic, partition, fetch_timeout)
-                    .unwrap();
-
-                last_offset != max_offset
-            };
-
             loop {
-                // Detach can be done before moving to another thread and building segment there to perf upupup
-                let res = self.base.poll(Duration::ZERO).unwrap().unwrap().detach();
+                if ins.elapsed() > collect_message_interval {
+                    break;
+                }
 
-                let partiton = res.partition();
-                let offset = res.offset();
+                // Detach can be done before moving to another thread and building segment there to perf upupup
+                let res = match self.base.poll(Duration::ZERO) {
+                    Some(mess) => mess.unwrap().detach(),
+                    None => {
+                        continue;
+                    }
+                };
 
                 let segment = res.into();
 
                 segments.push(segment);
-
-                if is_max_offset(offset, partiton) {
-                    break;
-                }
             }
 
             let sender = sender.clone();
