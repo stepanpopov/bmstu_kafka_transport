@@ -18,7 +18,7 @@ async fn main() {
 
     setup_env_logger(true, "RUST_LOG");
 
-    warp::serve(routes(config.code_service_url))
+    warp::serve(routes(config.code_service_url, config.chunk_byte_size))
         .run(config.listen.parse::<SocketAddr>().unwrap())
         .await;
 }

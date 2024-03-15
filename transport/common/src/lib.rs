@@ -13,7 +13,7 @@ use env_logger::fmt::Formatter;
 use env_logger::Builder;
 use log::{LevelFilter, Record};
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct Segment {
     pub payload: Vec<u8>,
     // pub send_time: String, // id
@@ -22,6 +22,7 @@ pub struct Segment {
     pub sender: String,
 }
 
+#[derive(Debug)]
 pub struct SegmentWithTime {
     pub segment: Segment,
     pub send_time: String,
@@ -70,7 +71,7 @@ impl From<OwnedMessage> for SegmentWithTime {
                 .try_into()
                 .expect("Incorrect byte slice length"),
         );
-        let sender = String::from_utf8(headers.get(1).unwrap().1.to_vec()).unwrap();
+        let sender = String::from_utf8(headers.get(2).unwrap().1.to_vec()).unwrap();
 
         let payload = value.payload().unwrap().to_vec();
 

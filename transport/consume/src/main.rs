@@ -59,6 +59,6 @@ async fn main() {
     consumer.subscribe(&config.topic);
 
     let _ = consumer
-        .start_consume_and_send(message_sender, Duration::from_secs(1))
+        .start_consume_and_send(message_sender, Duration::from_secs(30))
         .await;
 }

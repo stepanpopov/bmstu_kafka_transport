@@ -27,3 +27,34 @@ services:
       - KAFKA_CLUSTERS_0_BOOTSTRAP_SERVERS=kafka1:9092
       - KAFKA_CLUSTERS_0_NAME=kraft
       - SERVER_PORT=8080
+
+  produce:
+    image: produce
+    build:
+      context: ./transport
+      target: produce
+    environment:
+      - BROKERS=kafka1:9092
+      - TOPIC=test
+      - LISTEN_PRODUCE=0.0.0.0:8002
+
+  consume:
+    image: consume
+    build:
+      context: ./transport
+      target: consume
+    environment:
+      - BROKERS=kafka1:9092
+      - TOPIC=test
+      - COUNSUMER_GROUP_ID=akanev
+      - CONSUME_RECEIVE_SERVICE_URL=
+
+  split:
+    image: split
+    build:
+      context: ./transport
+      target: split
+    environment:
+      - CHUNK_BYTE_SIZE=200
+      - SPLIT_CODE_SERVICE_URL=http://localhost:8081/code
+      - LISTEN_SPLIT=0.0.0.0:8000

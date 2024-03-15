@@ -6,8 +6,6 @@ use warp::{http, reply::Reply, Filter};
 
 use common::{Segment, SegmentWithTime};
 
-const CHUNK_BYTE_SIZE: usize = 2;
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Message {
     sender: String,
@@ -15,8 +13,8 @@ pub struct Message {
     payload: Vec<u8>,
 }
 
-fn split_message(m: Message) -> Vec<SegmentWithTime> {
-    let splitted_payload = m.payload.chunks(CHUNK_BYTE_SIZE);
+fn split_message(m: Message, chunk_byte_size: usize) -> Vec<SegmentWithTime> {
+    let splitted_payload = m.payload.chunks(chunk_byte_size);
     let seg_count = splitted_payload.len();
 
     let mut i = 0;
@@ -41,8 +39,9 @@ fn split_message(m: Message) -> Vec<SegmentWithTime> {
 pub async fn send_message(
     m: Message,
     code_service_url: impl IntoUrl,
+    chunk_byte_size: usize,
 ) -> Result<warp::reply::Response, warp::Rejection> {
-    let segments = split_message(m);
+    let segments = split_message(m, chunk_byte_size);
 
     let client = reqwest::Client::new();
 

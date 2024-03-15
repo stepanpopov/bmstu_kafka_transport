@@ -1,3 +1,4 @@
+use log::{info, trace};
 use serde::{Deserialize, Serialize};
 
 use tokio::time::{interval, Duration, MissedTickBehavior};
@@ -8,6 +9,7 @@ use anyhow::{anyhow, Error};
 use itertools::Itertools;
 
 use std::sync::Arc;
+use std::time;
 
 use rdkafka::client::ClientContext;
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
@@ -35,12 +37,15 @@ fn build_messages(segments: Vec<SegmentWithTime>) -> Vec<Message> {
         .map(|(_, group)| group.collect::<Vec<SegmentWithTime>>())
         .map(|segments| {
             let first_segment = segments.first().unwrap();
+
+            info!("Segments: {:?}", &segments);
+
             let sender = first_segment.segment.sender.clone();
-            let segments_num = first_segment.segment.seg_num;
+            let segments_num = first_segment.segment.seg_count;
 
             let mut bitmap = vec![false; segments_num];
             for seg in segments.iter() {
-                bitmap[seg.segment.seg_num] = true
+                bitmap[seg.segment.seg_num] = true;
             }
 
             if bitmap.into_iter().all(|b| b) {
@@ -104,45 +109,50 @@ impl<T: ClientContext + ConsumerContext> SegmentConsumer<T> {
             return Err(anyhow!("call subscribe first"));
         }
 
+        info!("Started to consume and send");
+
         let sender = Arc::new(sender);
 
-        let mut interval = interval(collect_message_interval);
+        //let mut interval_stream = IntervalStream::new(interval);
 
-        interval.set_missed_tick_behavior(MissedTickBehavior::Delay);
-
-        let mut interval_stream = IntervalStream::new(interval);
-
-        while let Some(ins) = interval_stream.next().await {
+        loop {
             let mut segments: Vec<SegmentWithTime> = vec![];
 
+            let start_time = time::Instant::now();
+
             loop {
-                if ins.elapsed() > collect_message_interval {
+                if start_time.elapsed() > collect_message_interval {
+                    trace!("Stopping loop after: {:?}", start_time.elapsed());
                     break;
                 }
 
                 // Detach can be done before moving to another thread and building segment there to perf upupup
-                let res = match self.base.poll(Duration::ZERO) {
+                let res = match self.base.poll(Duration::from_millis(500)) {
                     Some(mess) => mess.unwrap().detach(),
                     None => {
                         continue;
                     }
                 };
 
+                info!("got message: {:?}", &res);
+
                 let segment = res.into();
 
                 segments.push(segment);
             }
 
-            let sender = sender.clone();
-            tokio::spawn(async move {
-                let messages = tokio::task::spawn_blocking(move || build_messages(segments))
-                    .await
-                    .unwrap();
+            if segments.len() > 0 {
+                let sender = sender.clone();
+                tokio::spawn(async move {
+                    let messages = tokio::task::spawn_blocking(move || build_messages(segments))
+                        .await
+                        .unwrap();
 
-                for mes in messages {
-                    sender.send_message(&mes).await.unwrap();
-                }
-            });
+                    for mes in messages {
+                        sender.send_message(&mes).await.unwrap();
+                    }
+                });
+            }
         }
 
         Ok(())
