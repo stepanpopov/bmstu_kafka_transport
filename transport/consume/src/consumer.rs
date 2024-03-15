@@ -1,8 +1,8 @@
 use log::{info, trace};
 use serde::{Deserialize, Serialize};
 
-use tokio::time::{interval, Duration, MissedTickBehavior};
-use tokio_stream::wrappers::IntervalStream;
+use tokio::time::{Duration};
+
 use tokio_stream::StreamExt;
 
 use anyhow::{anyhow, Error};
@@ -13,13 +13,13 @@ use std::time;
 
 use rdkafka::client::ClientContext;
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
-use rdkafka::consumer::stream_consumer::StreamConsumer;
+
 use rdkafka::consumer::{BaseConsumer, Consumer, ConsumerContext};
-use rdkafka::message::{Headers, Message as KafkaMessage};
+use rdkafka::message::{Message as KafkaMessage};
 
 use super::sender::MessageSender;
 
-use common::{Segment, SegmentWithTime};
+use common::{SegmentWithTime};
 
 #[derive(Deserialize, Serialize)]
 pub struct Message {
@@ -141,7 +141,7 @@ impl<T: ClientContext + ConsumerContext> SegmentConsumer<T> {
                 segments.push(segment);
             }
 
-            if segments.len() > 0 {
+            if !segments.is_empty() {
                 let sender = sender.clone();
                 tokio::spawn(async move {
                     let messages = tokio::task::spawn_blocking(move || build_messages(segments))
@@ -167,11 +167,11 @@ impl<T: ClientContext + ConsumerContext> SegmentConsumer<T> {
             .fetch_metadata(Some(topic), fetch_timeout)
             .unwrap()
             .topics()
-            .into_iter()
+            .iter()
             .find(|t| t.name() == topic)
             .unwrap()
             .partitions()
-            .into_iter()
+            .iter()
             .map(|p| p.id())
             .collect()
     }

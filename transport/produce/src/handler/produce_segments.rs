@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use warp::{http, reply::Reply, Filter};
+use warp::{http, reply::Reply};
 
 use common::SegmentWithTime;
 
@@ -13,16 +13,16 @@ pub async fn produce_segments(
 ) -> Result<warp::reply::Response, warp::Rejection> {
     match producer.produce_segment(&topic_name, segment).await {
         Ok(_) => {
-            return Ok(
+            Ok(
                 warp::reply::with_status("Segment sent", http::StatusCode::OK).into_response(),
             )
         }
         Err(e) => {
-            return Ok(warp::reply::with_status(
+            Ok(warp::reply::with_status(
                 format!("Failed to send segment: {}", e),
                 http::StatusCode::INTERNAL_SERVER_ERROR,
             )
-            .into_response());
+            .into_response())
         }
     }
 }

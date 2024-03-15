@@ -2,8 +2,8 @@ use std::time::Duration;
 
 use anyhow::{anyhow, Result};
 
-use rdkafka::message::OwnedHeaders;
-use rdkafka::producer::{FutureProducer, FutureRecord};
+
+use rdkafka::producer::{FutureProducer};
 use rdkafka::ClientConfig;
 
 use common::SegmentWithTime;

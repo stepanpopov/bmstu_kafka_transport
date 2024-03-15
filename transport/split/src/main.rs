@@ -1,10 +1,10 @@
 use std::net::SocketAddr;
-use warp::{http, Filter};
+
 
 use config::Config;
 use handler::routes;
 
-use log::{error, info};
+
 
 use common::setup_env_logger;
 

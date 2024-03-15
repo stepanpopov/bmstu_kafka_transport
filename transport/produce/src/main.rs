@@ -1,7 +1,7 @@
 use log::info;
 use producer::SegmentProducer;
 use std::{net::SocketAddr, sync::Arc};
-use warp::{http, Filter};
+
 
 use config::Config;
 use handler::routes;

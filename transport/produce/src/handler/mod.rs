@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use produce_segments::produce_segments;
-use warp::{filters::BoxedFilter, http, Filter};
+use warp::{filters::BoxedFilter, Filter};
 
 use crate::producer::SegmentProducer;
 
@@ -19,12 +19,12 @@ pub fn routes(
     producer: Arc<SegmentProducer>,
     topic_name: String,
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
-    let transfer = warp::post()
+    
+
+    warp::post()
         .and(warp::path("transfer"))
         .and(warp::body::json())
         .and(producer_filter(producer))
         .and(topic_name_filter(topic_name))
-        .and_then(produce_segments);
-
-    transfer
+        .and_then(produce_segments)
 }

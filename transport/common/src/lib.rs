@@ -1,10 +1,10 @@
 use std::thread;
-use std::{collections::HashMap, io::Write};
+use std::{io::Write};
 
-use rdkafka::message::{Headers, OwnedHeaders, OwnedMessage, ToBytes};
+use rdkafka::message::{Headers, OwnedHeaders, OwnedMessage};
 use rdkafka::producer::FutureRecord;
 use rdkafka::Message;
-use serde::de::value;
+
 use serde::ser::SerializeStruct;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -40,12 +40,12 @@ impl SegmentWithTime {
     }
 }
 
-impl Into<OwnedHeaders> for Segment {
-    fn into(self) -> OwnedHeaders {
+impl From<Segment> for OwnedHeaders {
+    fn from(val: Segment) -> Self {
         OwnedHeaders::new()
-            .add("seg_count", &self.seg_count.to_ne_bytes())
-            .add("seg_num", &self.seg_num.to_ne_bytes())
-            .add("sender", &self.sender)
+            .add("seg_count", &val.seg_count.to_ne_bytes())
+            .add("seg_num", &val.seg_num.to_ne_bytes())
+            .add("sender", &val.sender)
     }
 }
 
@@ -148,9 +148,9 @@ pub fn setup_env_logger(log_thread: bool, default_env_var_log_level: &str) {
 
         let local_time: DateTime<Local> = Local::now();
         let time_str = local_time.format("%H:%M:%S%.3f").to_string();
-        write!(
+        writeln!(
             formatter,
-            "{} {}{} - {} - {}\n",
+            "{} {}{} - {} - {}",
             time_str,
             thread_name,
             record.level(),

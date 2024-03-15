@@ -1,6 +1,6 @@
-use reqwest::{IntoUrl, Url};
+use reqwest::{IntoUrl};
 use send_message::send_message;
-use warp::{filters::BoxedFilter, http, Filter};
+use warp::{filters::BoxedFilter, Filter};
 
 mod send_message;
 
@@ -14,20 +14,20 @@ fn code_service_url_filter(
 }
 
 fn chunk_size_filter(chunk_size: usize) -> BoxedFilter<(usize,)> {
-    warp::any().map(move || chunk_size.clone()).boxed()
+    warp::any().map(move || chunk_size).boxed()
 }
 
 pub fn routes(
     code_service_url: impl ThreadSafeIntoUrl,
     chunk_size: usize,
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
-    let send = warp::post()
+    
+
+    warp::post()
         .and(warp::path("send"))
         .and(warp::path::end())
         .and(warp::body::json())
         .and(code_service_url_filter(code_service_url))
         .and(chunk_size_filter(chunk_size))
-        .and_then(send_message);
-
-    send
+        .and_then(send_message)
 }
