@@ -12,3 +12,6 @@ rdkafka = { workspace = true }
 
 chrono = "0.4.34"
 env_logger = { version = "0.11.2" }
+
+[lib]
+crate-type = ["rlib"]

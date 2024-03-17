@@ -34,20 +34,21 @@ services:
       context: ./transport
       target: produce
     environment:
-      - BROKERS=kafka1:9092
-      - TOPIC=test
-      - LISTEN_PRODUCE=0.0.0.0:8002
+      - LISTEN=0.0.0.0:8002
+    command: [ "--brokers=kafka1:9092", "--topic=test" ]
 
   consume:
     image: consume
     build:
       context: ./transport
       target: consume
-    environment:
-      - BROKERS=kafka1:9092
-      - TOPIC=test
-      - COUNSUMER_GROUP_ID=akanev
-      - CONSUME_RECEIVE_SERVICE_URL=
+    command:
+      [
+        "--brokers=kafka1:9092",
+        "--topic=test",
+        "--group-id=akanev",
+        "--receive_url=http://receive:8082/receive"
+      ]
 
   split:
     image: split
@@ -55,6 +56,9 @@ services:
       context: ./transport
       target: split
     environment:
-      - CHUNK_BYTE_SIZE=200
-      - SPLIT_CODE_SERVICE_URL=http://localhost:8081/code
-      - LISTEN_SPLIT=0.0.0.0:8000
+      - LISTEN=0.0.0.0:8000
+    command:
+      [
+        "--code-service-url=http://code:8081/code",
+        "--chunk-byte-size=200"
+      ]

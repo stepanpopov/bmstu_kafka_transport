@@ -1,3 +1,6 @@
+ARG RUSTFLAGS='-C target-feature=+crt-static'
+ARG CARGO_BUILD_TARGET=x86_64-unknown-linux-gnu
+
 FROM rust:1.76 as builder
 
 # create a new workspace
@@ -21,11 +24,18 @@ COPY ./split/Cargo.toml ./split/Cargo.toml
 RUN USER=root cargo new --bin produce
 COPY ./produce/Cargo.toml ./produce/Cargo.toml
 
-# for build rdkafka
+# for build rdkafka 
 RUN USER=root apt update && apt install cmake -y
 
+ARG RUSTFLAGS
+ARG CARGO_BUILD_TARGET
+
+ENV RUSTFLAGS=${RUSTFLAGS}
+ENV CARGO_BUILD_TARGET=${CARGO_BUILD_TARGET}
+
 # this build step will cache your dependencies
-RUN cargo build --release
+
+RUN cargo build --release -v
 
 # copy your source tree
 COPY ./common/src ./common/src
@@ -33,45 +43,44 @@ COPY ./consume/src ./consume/src
 COPY ./split/src ./split/src
 COPY ./produce/src ./produce/src
 
-# build for release
-# RUN rm ./target/release/deps/common*
-#RUN rm ./target/release/deps/split*
-#RUN rm ./target/release/deps/consume*
-#RUN rm ./target/release/deps/produce*
+RUN rm ./target/${CARGO_BUILD_TARGET}/release/deps/libcommon*
+RUN cargo build --release -v
 
-RUN cargo build --release
+RUN ldd ./target/${CARGO_BUILD_TARGET}/release/split && echo 'aaa' && echo ${RUSTFLAGS} && cat ./split/src/main.rs
 
 # final
 RUN echo FINAL
 
-ENV BROKERS=localhost:9094
-ENV TOPIC=test
-ENV COUNSUMER_GROUP_ID=aaa
 
-## consume
-ENV CONSUME_RECEIVE_SERVICE_URL=http://localhost:8082/receive
-ENV COUNSUMER_GROUP_ID=aaa
-
+# consume
 FROM scratch as consume
-COPY --from=builder ./transport/target/release/consume ./
-CMD ./consume --brokers=${BROKERS} --topic=${TOPIC} --group-id=${COUNSUMER_GROUP_ID} --receive_url=${CONSUME_RECEIVE_SERVICE_URL}
+ARG CARGO_BUILD_TARGET
+COPY --from=builder ./transport/target/${CARGO_BUILD_TARGET}/release/consume /usr/local/bin/consume
+
+ENTRYPOINT [ "consume" ]
+CMD ["--brokers=kafka1:9092", "--topic=test", "--group-id=akanev", "--receive_url=http://receive:8082/receive"]
 LABEL service=consume
 
-## produce
-ENV LISTEN_PRODUCE=0.0.0.0:8002
 
+# scratch
 FROM scratch as produce
-COPY --from=builder ./transport/target/release/produce ./
-CMD LISTEN=${LISTEN_PRODUCE} ./produce --brokers=${BROKERS} --topic=${TOPIC}
+ARG CARGO_BUILD_TARGET
+COPY --from=builder ./transport/target/${CARGO_BUILD_TARGET}/release/produce /usr/local/bin/produce
+
+ENV LISTEN=0.0.0.0:8002
+
+ENTRYPOINT [ "produce" ]
+CMD ["--brokers=kafka1:9092", "--topic=test"]
 LABEL service=produce
 
 
-## split
-ENV CHUNK_BYTE_SIZE=200
-ENV SPLIT_CODE_SERVICE_URL=http://localhost:8081/code
-ENV LISTEN_SPLIT=0.0.0.0:8000
-
+# split
 FROM scratch as split
-COPY --from=builder ./transport/target/release/split ./
-CMD LISTEN=${LISTEN_SPLIT} ./split --code-service-url=${SPLIT_CODE_SERVICE_URL} --chunk_byte_size=${CHUNK_BYTE_SIZE}
+ARG CARGO_BUILD_TARGET
+COPY --from=builder /transport/target/${CARGO_BUILD_TARGET}/release/split /usr/local/bin/split
+
+ENV LISTEN=0.0.0.0:8000
+
+ENTRYPOINT [ "split" ]
+CMD ["--code-service-url=http://code:8081/code", "--chunk-byte-size=200"]
 LABEL service=split

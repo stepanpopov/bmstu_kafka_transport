@@ -6,6 +6,8 @@ BROKERS ?= localhost:9094
 TOPIC ?= test
 COUNSUMER_GROUP_ID ?= aaa
 
+TEST_SERVER_PORT ?= 8082
+
 # cd transport && docker build -t consume --target consume . // for single
 
 build-docker:
@@ -24,4 +26,4 @@ run-test-code-server:
 	python3 ./test_server.py 8081
 
 run-test-receive-server:
-	python3 ./test_server.py 8082
+	python3 ./test_server.py ${TEST_SERVER_PORT}

@@ -8,10 +8,10 @@ const CHUNK_BYTE_SIZE_DEFAULT: usize = 2;
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    #[arg(short, long)]
+    #[arg(long)]
     code_service_url: String,
 
-    #[arg(short, long)]
+    #[arg(long)]
     chunk_byte_size: usize,
 }
 
