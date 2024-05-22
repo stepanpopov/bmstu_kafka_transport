@@ -1,7 +1,7 @@
 use log::{info, trace};
 use serde::{Deserialize, Serialize};
 
-use tokio::time::{Duration};
+use tokio::time::Duration;
 
 use tokio_stream::StreamExt;
 
@@ -15,17 +15,17 @@ use rdkafka::client::ClientContext;
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
 
 use rdkafka::consumer::{BaseConsumer, Consumer, ConsumerContext};
-use rdkafka::message::{Message as KafkaMessage};
+use rdkafka::message::Message as KafkaMessage;
 
 use super::sender::MessageSender;
 
-use common::{SegmentWithTime};
+use common::SegmentWithTime;
 
 #[derive(Deserialize, Serialize)]
 pub struct Message {
     payload: Vec<u8>,
     has_error: bool,
-    // send_time: String, ?
+    send_time: String,
     sender: String,
 }
 
@@ -42,6 +42,7 @@ fn build_messages(segments: Vec<SegmentWithTime>) -> Vec<Message> {
 
             let sender = first_segment.segment.sender.clone();
             let segments_num = first_segment.segment.seg_count;
+            let send_time = first_segment.send_time.clone();
 
             let mut bitmap = vec![false; segments_num];
             for seg in segments.iter() {
@@ -55,6 +56,7 @@ fn build_messages(segments: Vec<SegmentWithTime>) -> Vec<Message> {
                     payload: full_payload,
                     has_error: false,
                     sender,
+                    send_time,
                 };
             }
 
@@ -62,6 +64,7 @@ fn build_messages(segments: Vec<SegmentWithTime>) -> Vec<Message> {
                 payload: vec![],
                 has_error: true,
                 sender,
+                send_time,
             }
         })
         .collect::<Vec<Message>>()
