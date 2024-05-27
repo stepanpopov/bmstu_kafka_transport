@@ -1,4 +1,4 @@
-use log::{info, trace};
+use log::{error, info, trace};
 use serde::{Deserialize, Serialize};
 
 use tokio::time::Duration;
@@ -17,57 +17,18 @@ use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
 use rdkafka::consumer::{BaseConsumer, Consumer, ConsumerContext};
 use rdkafka::message::Message as KafkaMessage;
 
+use crate::message_builder::{self, MessageBuilder};
+
 use super::sender::MessageSender;
 
 use common::SegmentWithTime;
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct Message {
-    payload: Vec<u8>,
-    has_error: bool,
-    send_time: String,
-    sender: String,
-}
-
-fn build_messages(segments: Vec<SegmentWithTime>) -> Vec<Message> {
-    segments
-        .into_iter()
-        .group_by(|seg| seg.send_time.clone())
-        .into_iter()
-        .map(|(_, group)| group.collect::<Vec<SegmentWithTime>>())
-        .map(|segments| {
-            let first_segment = segments.first().unwrap();
-
-            info!("Segments: {:?}", &segments);
-
-            let sender = first_segment.segment.sender.clone();
-            let segments_num = first_segment.segment.seg_count;
-            let send_time = first_segment.send_time.clone();
-
-            let mut bitmap = vec![false; segments_num];
-            for seg in segments.iter() {
-                bitmap[seg.segment.seg_num] = true;
-            }
-
-            if bitmap.into_iter().all(|b| b) {
-                let full_payload = segments.into_iter().map(|seg| seg.segment.payload).concat();
-
-                return Message {
-                    payload: full_payload,
-                    has_error: false,
-                    sender,
-                    send_time,
-                };
-            }
-
-            Message {
-                payload: vec![],
-                has_error: true,
-                sender,
-                send_time,
-            }
-        })
-        .collect::<Vec<Message>>()
+    pub payload: String,
+    pub has_error: bool,
+    pub send_time: String,
+    pub sender: String,
 }
 
 pub struct SegmentConsumer<T: ClientContext + ConsumerContext> {
@@ -106,6 +67,7 @@ impl<T: ClientContext + ConsumerContext> SegmentConsumer<T> {
     pub async fn start_consume_and_send(
         &self,
         sender: MessageSender,
+        message_builder: MessageBuilder,
         collect_message_interval: Duration,
     ) -> Result<(), Error> {
         if self.topic.is_none() {
@@ -114,7 +76,10 @@ impl<T: ClientContext + ConsumerContext> SegmentConsumer<T> {
 
         info!("Started to consume and send");
 
+        // self.base.
+
         let sender = Arc::new(sender);
+        let message_builder = Arc::new(message_builder);
 
         //let mut interval_stream = IntervalStream::new(interval);
 
@@ -131,7 +96,13 @@ impl<T: ClientContext + ConsumerContext> SegmentConsumer<T> {
 
                 // Detach can be done before moving to another thread and building segment there to perf upupup
                 let res = match self.base.poll(Duration::from_millis(500)) {
-                    Some(mess) => mess.unwrap().detach(),
+                    Some(mess) => match mess {
+                        Ok(mess) => mess.detach(),
+                        Err(e) => {
+                            error!("{}", e);
+                            continue;
+                        }
+                    },
                     None => {
                         continue;
                     }
@@ -144,18 +115,21 @@ impl<T: ClientContext + ConsumerContext> SegmentConsumer<T> {
                 segments.push(segment);
             }
 
-            if !segments.is_empty() {
-                let sender = sender.clone();
-                tokio::spawn(async move {
-                    let messages = tokio::task::spawn_blocking(move || build_messages(segments))
+            //if !segments.is_empty() {
+            let sender = sender.clone();
+            let message_builder = message_builder.clone();
+
+            tokio::spawn(async move {
+                let messages =
+                    tokio::task::spawn_blocking(move || message_builder.build_messages(segments))
                         .await
                         .unwrap();
 
-                    for mes in messages {
-                        sender.send_message(&mes).await.unwrap();
-                    }
-                });
-            }
+                for mes in messages {
+                    sender.send_message(&mes).await.unwrap();
+                }
+            });
+            //}
         }
 
         Ok(())

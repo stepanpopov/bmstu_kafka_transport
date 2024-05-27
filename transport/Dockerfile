@@ -24,8 +24,11 @@ COPY ./split/Cargo.toml ./split/Cargo.toml
 RUN USER=root cargo new --bin produce
 COPY ./produce/Cargo.toml ./produce/Cargo.toml
 
-# for build rdkafka 
-RUN USER=root apt update && apt install cmake -y
+# for build rdkafka
+# RUN gpg --keyserver subkeys.pgp.net --recv 16126D3A3E5C1192
+# RUN gpg --export --armor 16126D3A3E5C1192 | sudo apt-key add -
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 'F6EC B376 2474 EDA9 D21B 7022 8719 20D1 991B C93C'
+RUN USER=root apt-get update && apt-get install cmake -y
 
 ARG RUSTFLAGS
 ARG CARGO_BUILD_TARGET
@@ -57,6 +60,7 @@ FROM scratch as consume
 ARG CARGO_BUILD_TARGET
 COPY --from=builder ./transport/target/${CARGO_BUILD_TARGET}/release/consume /usr/local/bin/consume
 
+ENV RUST_LOG=DEBUG
 ENTRYPOINT [ "consume" ]
 CMD ["--brokers=kafka1:9092", "--topic=test", "--group-id=akanev", "--receive_url=http://receive:8082/receive"]
 LABEL service=consume
@@ -69,6 +73,7 @@ COPY --from=builder ./transport/target/${CARGO_BUILD_TARGET}/release/produce /us
 
 ENV LISTEN=0.0.0.0:8002
 
+ENV RUST_LOG=DEBUG
 ENTRYPOINT [ "produce" ]
 CMD ["--brokers=kafka1:9092", "--topic=test"]
 LABEL service=produce
@@ -81,6 +86,7 @@ COPY --from=builder /transport/target/${CARGO_BUILD_TARGET}/release/split /usr/l
 
 ENV LISTEN=0.0.0.0:8000
 
+ENV RUST_LOG=DEBUG
 ENTRYPOINT [ "split" ]
 CMD ["--code-service-url=http://code:8081/code", "--chunk-byte-size=200"]
 LABEL service=split

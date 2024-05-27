@@ -17,3 +17,4 @@ warp = "0.3"
 rdkafka = { version = "0.25", features = ["cmake-build"] }
 log = "0.4.21"
 anyhow = {version = "1"}
+chrono = "0.4.34"

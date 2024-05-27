@@ -1,6 +1,6 @@
-use log::{info};
+use log::info;
 
-use tokio::time::Duration;
+use chrono::{DateTime, Duration, NaiveDate, Utc};
 
 use rdkafka::client::ClientContext;
 use rdkafka::consumer::{ConsumerContext, Rebalance};
@@ -12,11 +12,14 @@ use common::setup_env_logger;
 
 mod command;
 mod consumer;
+mod message_builder;
 mod sender;
 
 use command::Config;
 use consumer::SegmentConsumer;
 use sender::MessageSender;
+
+use crate::message_builder::MessageBuilder;
 
 // A context can be used to change the behavior of producers and consumers by adding callbacks
 // that will be executed by librdkafka.
@@ -52,6 +55,7 @@ async fn main() {
     info!("rd_kafka_version: 0x{:08x}, {}", version_n, version_s);
 
     let message_sender = MessageSender::new(config.receive_url).unwrap();
+    let message_builder = MessageBuilder::new(Duration::minutes(30), 3);
 
     let mut consumer =
         SegmentConsumer::new(SegmentConsumerContext, &config.group_id, &config.brokers);
@@ -59,6 +63,10 @@ async fn main() {
     consumer.subscribe(&config.topic);
 
     let _ = consumer
-        .start_consume_and_send(message_sender, Duration::from_secs(30))
+        .start_consume_and_send(
+            message_sender,
+            message_builder,
+            tokio::time::Duration::from_secs(30),
+        )
         .await;
 }

@@ -1,5 +1,4 @@
-
-
+use log::info;
 use reqwest::{self, IntoUrl};
 use serde::{Deserialize, Serialize};
 use warp::{http, reply::Reply, Filter};
@@ -9,12 +8,15 @@ use common::{Segment, SegmentWithTime};
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Message {
     sender: String,
-    time: String,
-    payload: Vec<u8>,
+    send_time: String,
+    payload: String,
 }
 
 fn split_message(m: Message, chunk_byte_size: usize) -> Vec<SegmentWithTime> {
-    let splitted_payload = m.payload.chunks(chunk_byte_size);
+    let payload_u16: Vec<u16> = m.payload.encode_utf16().collect();
+    let payload_bytes: &[u8] = unsafe { payload_u16.align_to().1 };
+
+    let splitted_payload = payload_bytes.chunks(chunk_byte_size);
     let seg_count = splitted_payload.len();
 
     let mut i = 0;
@@ -30,7 +32,7 @@ fn split_message(m: Message, chunk_byte_size: usize) -> Vec<SegmentWithTime> {
 
             SegmentWithTime {
                 segment,
-                send_time: m.time.clone(),
+                send_time: m.send_time.clone(),
             }
         })
         .collect()
@@ -41,6 +43,7 @@ pub async fn send_message(
     code_service_url: impl IntoUrl,
     chunk_byte_size: usize,
 ) -> Result<warp::reply::Response, warp::Rejection> {
+    info!("send_message recieved: {:?}", &m);
     let segments = split_message(m, chunk_byte_size);
 
     let client = reqwest::Client::new();

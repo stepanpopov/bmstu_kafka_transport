@@ -1,6 +1,6 @@
 version: "3.9"
-volumes:
-  volume1:
+#volumes:
+#  volume1:
 services:
   kafka1:
     image: 'bitnami/kafka:latest'
@@ -16,20 +16,24 @@ services:
       - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka1:9093
       - ALLOW_PLAINTEXT_LISTENER=yes
       - KAFKA_KRAFT_CLUSTER_ID=r7elD8wLSgqhtuRGf0UcJA
-    volumes:
-      - volume1:/bitnami/kafka
-  ui:
-    image: provectuslabs/kafka-ui:v0.4.0
-    ports:
-      - "8080:8080"
-    environment:
-      - DYNAMIC_CONFIG_ENABLED:'true'
-      - KAFKA_CLUSTERS_0_BOOTSTRAP_SERVERS=kafka1:9092
-      - KAFKA_CLUSTERS_0_NAME=kraft
-      - SERVER_PORT=8080
+    #volumes:
+    #  - volume1:/bitnami/kafka
+  # ui:
+  #   image: provectuslabs/kafka-ui:v0.4.0
+  #   ports:
+  #     - "8080:8080"
+  #   environment:
+  #     - DYNAMIC_CONFIG_ENABLED:'true'
+  #     - KAFKA_CLUSTERS_0_BOOTSTRAP_SERVERS=kafka1:9092
+  #     - KAFKA_CLUSTERS_0_NAME=kraft
+  #     - SERVER_PORT=8080
 
   produce:
     image: produce
+    depends_on:
+      - kafka1
+    ports:
+      - "8002:8002"
     build:
       context: ./transport
       target: produce
@@ -39,6 +43,8 @@ services:
 
   consume:
     image: consume
+    depends_on:
+      - kafka1
     build:
       context: ./transport
       target: consume
@@ -47,11 +53,13 @@ services:
         "--brokers=kafka1:9092",
         "--topic=test",
         "--group-id=akanev",
-        "--receive_url=http://receive:8082/receive"
+        "--receive_url=http://host.docker.internal:8082/receive"
       ]
 
   split:
     image: split
+    ports:
+      - "8000:8000"
     build:
       context: ./transport
       target: split
@@ -59,6 +67,6 @@ services:
       - LISTEN=0.0.0.0:8000
     command:
       [
-        "--code-service-url=http://code:8081/code",
+        "--code-service-url=http://host.docker.internal:7777/api/code",
         "--chunk-byte-size=200"
       ]

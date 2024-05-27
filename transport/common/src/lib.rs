@@ -1,5 +1,5 @@
+use std::io::Write;
 use std::thread;
-use std::{io::Write};
 
 use rdkafka::message::{Headers, OwnedHeaders, OwnedMessage};
 use rdkafka::producer::FutureRecord;
@@ -22,7 +22,7 @@ pub struct Segment {
     pub sender: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SegmentWithTime {
     pub segment: Segment,
     pub send_time: String,
@@ -164,6 +164,8 @@ pub fn setup_env_logger(log_thread: bool, default_env_var_log_level: &str) {
 
     if std::env::var(default_env_var_log_level).is_err() {
         builder.filter_level(LevelFilter::Info);
+    } else {
+        builder.parse_env(default_env_var_log_level);
     }
 
     // rust_log.map(|conf| builder.parse_filters(conf));
